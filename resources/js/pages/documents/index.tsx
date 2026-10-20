@@ -121,7 +121,7 @@ export default function DocumentsIndex({ documents, pagination, categories, allT
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [editingDoc, setEditingDoc] = useState<DocumentItem | null>(null);
     const [viewingDoc, setViewingDoc] = useState<DocumentItem | null>(null);
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
     const [selectedCategory, setSelectedCategory] = useState<string>(filters.category || 'all');
     const [selectedStatus, setSelectedStatus] = useState<string>(filters.status || 'all');
     const [searchTerm, setSearchTerm] = useState<string>(filters.search || '');
@@ -966,13 +966,15 @@ export default function DocumentsIndex({ documents, pagination, categories, allT
             </ResponsiveModal>
 
             {/* Split Screen Document Detail & PDF Preview Modal */}
-            <DocumentDetailModal
-                doc={viewingDoc}
-                isOpen={!!viewingDoc}
-                onClose={() => setViewingDoc(null)}
-                onDelete={handleDelete}
-                categories={categories}
-            />
+            {viewingDoc && (
+                <DocumentDetailModal
+                    doc={viewingDoc}
+                    isOpen={true}
+                    onClose={() => setViewingDoc(null)}
+                    onDelete={handleDelete}
+                    categories={categories}
+                />
+            )}
         </AppLayout>
     );
 }

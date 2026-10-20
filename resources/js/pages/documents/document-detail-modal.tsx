@@ -82,33 +82,33 @@ type Props = {
 };
 
 export default function DocumentDetailModal({ doc, isOpen, onClose, onDelete, categories }: Props) {
-    if (!doc) return null;
-
     const [copiedOcr, setCopiedOcr] = useState(false);
     const [tagInput, setTagInput] = useState('');
-    const [tagsList, setTagsList] = useState<string[]>(doc.tags || []);
-    const [fullOcrText, setFullOcrText] = useState<string | null>(doc.contentText || null);
+    const [tagsList, setTagsList] = useState<string[]>([]);
+    const [fullOcrText, setFullOcrText] = useState<string | null>(null);
     const [loadingOcr, setLoadingOcr] = useState(false);
 
     const { data, setData, patch, processing, isDirty } = useForm({
-        title: doc.title,
-        category: doc.category,
-        vendor: doc.vendor || '',
-        amount: doc.amount !== null ? doc.amount.toString() : '',
-        currency: doc.currency || 'EUR',
-        issued_on: doc.issuedOn || '',
-        due_on: doc.dueOn || '',
-        expires_on: doc.expiresOn || '',
-        notes: doc.notes || '',
-        tags: doc.tags ? doc.tags.join(', ') : '',
+        title: '',
+        category: 'other',
+        vendor: '',
+        amount: '',
+        currency: 'EUR',
+        issued_on: '',
+        due_on: '',
+        expires_on: '',
+        notes: '',
+        tags: '',
     });
 
     useEffect(() => {
+        if (!doc) return;
+
         setData({
-            title: doc.title,
-            category: doc.category,
+            title: doc.title || '',
+            category: doc.category || 'other',
             vendor: doc.vendor || '',
-            amount: doc.amount !== null ? doc.amount.toString() : '',
+            amount: doc.amount !== null && doc.amount !== undefined ? doc.amount.toString() : '',
             currency: doc.currency || 'EUR',
             issued_on: doc.issuedOn || '',
             due_on: doc.dueOn || '',
@@ -132,6 +132,8 @@ export default function DocumentDetailModal({ doc, isOpen, onClose, onDelete, ca
                 .finally(() => setLoadingOcr(false));
         }
     }, [doc]);
+
+    if (!doc) return null;
 
     const handleAddTag = () => {
         const trimmed = tagInput.trim().toLowerCase();
