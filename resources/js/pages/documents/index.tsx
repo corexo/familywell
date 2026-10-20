@@ -26,6 +26,8 @@ import {
     FileText,
     Filter,
     FolderKanban,
+    LayoutGrid,
+    List,
     MoreVertical,
     Plus,
     Receipt,
@@ -104,6 +106,7 @@ export default function DocumentsIndex({ documents, categories, allTags, stats, 
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [editingDoc, setEditingDoc] = useState<DocumentItem | null>(null);
     const [viewingDoc, setViewingDoc] = useState<DocumentItem | null>(null);
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [selectedCategory, setSelectedCategory] = useState<string>(filters.category || 'all');
     const [selectedStatus, setSelectedStatus] = useState<string>(filters.status || 'all');
     const [searchTerm, setSearchTerm] = useState<string>(filters.search || '');
@@ -371,7 +374,44 @@ export default function DocumentsIndex({ documents, categories, allTags, stats, 
                     )}
                 </div>
 
-                {/* Documents List */}
+                {/* View Toolbar: Count & Grid/List Toggle */}
+                <div className="flex items-center justify-between gap-4 pt-1">
+                    <span className="text-xs font-medium text-muted-foreground">
+                        {filteredDocs.length} {filteredDocs.length === 1 ? 'Dokument' : 'Dokumente'}
+                        {filteredDocs.length !== documents.length && (
+                            <span className="ml-1 text-muted-foreground/75 font-normal">
+                                (gefiltert aus {documents.length})
+                            </span>
+                        )}
+                    </span>
+
+                    <div className="flex items-center rounded-lg border bg-muted/30 p-0.5">
+                        <Button
+                            type="button"
+                            variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => setViewMode('grid')}
+                            className="h-7 px-2.5 gap-1.5 text-xs rounded-md"
+                            title="Kachelansicht"
+                        >
+                            <LayoutGrid className="size-3.5" />
+                            Kacheln
+                        </Button>
+                        <Button
+                            type="button"
+                            variant={viewMode === 'list' ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => setViewMode('list')}
+                            className="h-7 px-2.5 gap-1.5 text-xs rounded-md"
+                            title="Listenansicht"
+                        >
+                            <List className="size-3.5" />
+                            Liste
+                        </Button>
+                    </div>
+                </div>
+
+                {/* Documents Content */}
                 {filteredDocs.length === 0 ? (
                     <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed py-16 text-center">
                         <div className="flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
@@ -387,7 +427,7 @@ export default function DocumentsIndex({ documents, categories, allTags, stats, 
                             <Plus className="size-4" /> Dokument anlegen
                         </Button>
                     </div>
-                ) : (
+                ) : viewMode === 'grid' ? (
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {filteredDocs.map((doc) => {
                             const meta = CATEGORY_META[doc.category] || CATEGORY_META.other;
@@ -454,7 +494,9 @@ export default function DocumentsIndex({ documents, categories, allTags, stats, 
 
                                         {/* Title & Vendor */}
                                         <div className="mt-3">
-                                            <h3 className="font-semibold text-foreground line-clamp-1">{doc.title}</h3>
+                                            <h3 className="font-semibold text-foreground line-clamp-1 group-hover:text-primary transition-colors">
+                                                {doc.title}
+                                            </h3>
                                             {doc.vendor && (
                                                 <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
                                                     <Building2 className="size-3" />
@@ -506,16 +548,11 @@ export default function DocumentsIndex({ documents, categories, allTags, stats, 
 
                                         <div className="flex items-center justify-between text-xs text-muted-foreground">
                                             {doc.hasFile ? (
-                                                <a
-                                                    href={doc.fileUrl || '#'}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="flex items-center gap-1.5 font-medium text-primary hover:underline truncate max-w-[180px]"
-                                                >
+                                                <span className="flex items-center gap-1.5 font-medium text-primary truncate max-w-[180px]">
                                                     <Download className="size-3.5 shrink-0" />
                                                     <span className="truncate">{doc.fileName || 'Datei ansehen'}</span>
                                                     {doc.fileSize && <span className="text-[10px] text-muted-foreground">({formatBytes(doc.fileSize)})</span>}
-                                                </a>
+                                                </span>
                                             ) : (
                                                 <span className="text-[11px] text-muted-foreground italic">Keine Datei</span>
                                             )}
@@ -525,6 +562,133 @@ export default function DocumentsIndex({ documents, categories, allTags, stats, 
                                                     {new Date(doc.issuedOn).toLocaleDateString('de-DE')}
                                                 </span>
                                             )}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    /* List View */
+                    <div className="flex flex-col gap-2">
+                        {filteredDocs.map((doc) => {
+                            const meta = CATEGORY_META[doc.category] || CATEGORY_META.other;
+                            const Icon = meta.icon;
+
+                            return (
+                                <div
+                                    key={doc.id}
+                                    onClick={() => setViewingDoc(doc)}
+                                    className="group flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border bg-card p-3 sm:px-4 shadow-xs transition-all hover:border-primary/50 hover:bg-muted/20 cursor-pointer"
+                                >
+                                    {/* Left: Icon, Title, Vendor, Badges */}
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                        <span className={`inline-flex items-center justify-center size-9 rounded-lg border shrink-0 ${meta.color}`}>
+                                            <Icon className="size-4" />
+                                        </span>
+
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <h3 className="font-semibold text-sm text-foreground truncate group-hover:text-primary transition-colors">
+                                                    {doc.title}
+                                                </h3>
+                                                {doc.hasOcr && (
+                                                    <span className="inline-flex items-center rounded bg-emerald-500/10 px-1.5 py-0.2 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                                                        OCR
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 truncate">
+                                                {doc.vendor && (
+                                                    <span className="flex items-center gap-1 shrink-0 font-medium text-foreground/80">
+                                                        <Building2 className="size-3" />
+                                                        {doc.vendor}
+                                                    </span>
+                                                )}
+                                                {doc.vendor && <span>•</span>}
+                                                <span>{meta.label}</span>
+                                                {doc.fileName && (
+                                                    <>
+                                                        <span>•</span>
+                                                        <span className="truncate max-w-[160px]">{doc.fileName}</span>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Middle & Right: Tags, Date, Amount, Badges, Actions */}
+                                    <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0 pl-12 sm:pl-0">
+                                        {doc.tags && doc.tags.length > 0 && (
+                                            <div className="hidden lg:flex items-center gap-1 max-w-[180px] overflow-hidden">
+                                                {doc.tags.slice(0, 2).map((t) => (
+                                                    <span key={t} className="text-[10px] text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded truncate">
+                                                        #{t}
+                                                    </span>
+                                                ))}
+                                                {doc.tags.length > 2 && (
+                                                    <span className="text-[10px] text-muted-foreground">+{doc.tags.length - 2}</span>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {doc.issuedOn && (
+                                            <div className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
+                                                <Calendar className="size-3.5" />
+                                                <span>{new Date(doc.issuedOn).toLocaleDateString('de-DE')}</span>
+                                            </div>
+                                        )}
+
+                                        {doc.amount !== null && (
+                                            <div className="text-sm font-bold text-foreground text-right min-w-[75px]">
+                                                € {doc.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </div>
+                                        )}
+
+                                        {doc.isOverdue && (
+                                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0.5 font-normal shrink-0">
+                                                Überfällig
+                                            </Badge>
+                                        )}
+                                        {doc.isExpiring && !doc.isOverdue && (
+                                            <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-300 text-[10px] px-1.5 py-0.5 font-normal shrink-0">
+                                                Ablauf
+                                            </Badge>
+                                        )}
+
+                                        <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="size-8 text-muted-foreground">
+                                                        <MoreVertical className="size-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onClick={() => setViewingDoc(doc)} className="gap-2 font-medium">
+                                                        <Eye className="size-4" />
+                                                        Details & Vorschau
+                                                    </DropdownMenuItem>
+                                                    {doc.fileUrl && (
+                                                        <DropdownMenuItem asChild>
+                                                            <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="gap-2">
+                                                                <ExternalLink className="size-4" />
+                                                                In neuem Tab öffnen
+                                                            </a>
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                    <DropdownMenuItem onClick={() => openEdit(doc)} className="gap-2">
+                                                        <Edit3 className="size-4" />
+                                                        Schnell bearbeiten
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => handleDelete(doc.id)}
+                                                        className="gap-2 text-destructive focus:text-destructive"
+                                                    >
+                                                        <Trash2 className="size-4" />
+                                                        Löschen
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </div>
                                     </div>
                                 </div>
