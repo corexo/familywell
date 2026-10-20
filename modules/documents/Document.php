@@ -134,7 +134,7 @@ class Document extends Model
             'isOverdue' => $this->isOverdue($today),
             'hasFile' => $this->file_path !== null,
             'hasOcr' => ! empty($this->content_text),
-            'contentText' => $this->content_text ? mb_substr($this->content_text, 0, 400) : null,
+            'contentText' => $this->content_text,
             'fileName' => $this->file_name,
             'fileSize' => $this->file_size,
             'mimeType' => $this->mime_type,

@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
+import DocumentDetailModal from './document-detail-modal';
 import {
     AlertCircle,
     Building2,
@@ -18,6 +19,7 @@ import {
     Download,
     Edit3,
     ExternalLink,
+    Eye,
     FileCheck2,
     FileCode2,
     FileDigit,
@@ -101,6 +103,7 @@ export default function DocumentsIndex({ documents, categories, allTags, stats, 
 
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [editingDoc, setEditingDoc] = useState<DocumentItem | null>(null);
+    const [viewingDoc, setViewingDoc] = useState<DocumentItem | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<string>(filters.category || 'all');
     const [selectedStatus, setSelectedStatus] = useState<string>(filters.status || 'all');
     const [searchTerm, setSearchTerm] = useState<string>(filters.search || '');
@@ -393,7 +396,8 @@ export default function DocumentsIndex({ documents, categories, allTags, stats, 
                             return (
                                 <div
                                     key={doc.id}
-                                    className="group flex flex-col justify-between rounded-2xl border bg-card p-4 shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
+                                    onClick={() => setViewingDoc(doc)}
+                                    className="group flex flex-col justify-between rounded-2xl border bg-card p-4 shadow-sm transition-all hover:border-primary/50 hover:shadow-md cursor-pointer"
                                 >
                                     <div>
                                         {/* Top Row: Category badge & Actions */}
@@ -412,34 +416,40 @@ export default function DocumentsIndex({ documents, categories, allTags, stats, 
                                                 )}
                                             </div>
 
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="size-8 text-muted-foreground">
-                                                        <MoreVertical className="size-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    {doc.fileUrl && (
-                                                        <DropdownMenuItem asChild>
-                                                            <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="gap-2">
-                                                                <ExternalLink className="size-4" />
-                                                                Datei öffnen
-                                                            </a>
+                                            <div onClick={(e) => e.stopPropagation()}>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="size-8 text-muted-foreground">
+                                                            <MoreVertical className="size-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onClick={() => setViewingDoc(doc)} className="gap-2 font-medium">
+                                                            <Eye className="size-4" />
+                                                            Details & Vorschau
                                                         </DropdownMenuItem>
-                                                    )}
-                                                    <DropdownMenuItem onClick={() => openEdit(doc)} className="gap-2">
-                                                        <Edit3 className="size-4" />
-                                                        Bearbeiten
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() => handleDelete(doc.id)}
-                                                        className="gap-2 text-destructive focus:text-destructive"
-                                                    >
-                                                        <Trash2 className="size-4" />
-                                                        Löschen
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                                        {doc.fileUrl && (
+                                                            <DropdownMenuItem asChild>
+                                                                <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="gap-2">
+                                                                    <ExternalLink className="size-4" />
+                                                                    In neuem Tab öffnen
+                                                                </a>
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                        <DropdownMenuItem onClick={() => openEdit(doc)} className="gap-2">
+                                                            <Edit3 className="size-4" />
+                                                            Schnell bearbeiten
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() => handleDelete(doc.id)}
+                                                            className="gap-2 text-destructive focus:text-destructive"
+                                                        >
+                                                            <Trash2 className="size-4" />
+                                                            Löschen
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
                                         </div>
 
                                         {/* Title & Vendor */}
@@ -676,6 +686,15 @@ export default function DocumentsIndex({ documents, categories, allTags, stats, 
                     </div>
                 </form>
             </ResponsiveModal>
+
+            {/* Split Screen Document Detail & PDF Preview Modal */}
+            <DocumentDetailModal
+                doc={viewingDoc}
+                isOpen={!!viewingDoc}
+                onClose={() => setViewingDoc(null)}
+                onDelete={handleDelete}
+                categories={categories}
+            />
         </AppLayout>
     );
 }
