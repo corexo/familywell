@@ -30,6 +30,12 @@ class DocumentsServiceProvider extends ServiceProvider
 
         NotificationCategories::register('documents', 'Documents', 'file-text');
 
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                Commands\ImportDocuments::class,
+            ]);
+        }
+
         Route::middleware(['web', 'auth', 'family', 'module:documents'])
             ->prefix('m/documents')
             ->name('documents.')

@@ -15,29 +15,40 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 // a small variant for free. Old images with no thumb fall back to the original when a thumb is asked.
 class StoredImage
 {
+    public static function disk(?string $disk = null): string
+    {
+        if ($disk !== null && $disk !== 'r2') {
+            return $disk;
+        }
+
+        return filled(config('filesystems.disks.r2.key')) ? 'r2' : (config('filesystems.default') ?: 'local');
+    }
+
     public static function thumbPath(string $path): string
     {
         return $path.'.thumb.jpg';
     }
 
     /** Store the main image (and its thumb, if provided) and return the main path. */
-    public static function store(UploadedFile $main, ?UploadedFile $thumb, string $dir, string $disk = 'r2'): string
+    public static function store(UploadedFile $main, ?UploadedFile $thumb, string $dir, ?string $disk = null): string
     {
-        $path = $main->store($dir, $disk);
+        $d = self::disk($disk);
+        $path = $main->store($dir, $d);
         if ($thumb) {
-            Storage::disk($disk)->put(self::thumbPath($path), (string) file_get_contents($thumb->getRealPath()));
+            Storage::disk($d)->put(self::thumbPath($path), (string) file_get_contents($thumb->getRealPath()));
         }
 
         return $path;
     }
 
     /** Delete the main image and its thumb (a no-op on a null path). */
-    public static function delete(?string $path, string $disk = 'r2'): void
+    public static function delete(?string $path, ?string $disk = null): void
     {
         if (! $path) {
             return;
         }
-        Storage::disk($disk)->delete([$path, self::thumbPath($path)]);
+        $d = self::disk($disk);
+        Storage::disk($d)->delete([$path, self::thumbPath($path)]);
     }
 
     /**
@@ -63,9 +74,9 @@ class StoredImage
      * on every later render of the same card/list. `private` keeps Cloudflare and other shared caches
      * out, since these routes are per-user authorized.
      */
-    public static function response(string $path, ?string $variant, string $disk = 'r2'): StreamedResponse
+    public static function response(string $path, ?string $variant, ?string $disk = null): StreamedResponse
     {
-        $d = Storage::disk($disk);
+        $d = Storage::disk(self::disk($disk));
         $headers = request()->query('k') ? ['Cache-Control' => 'private, max-age=31536000, immutable'] : [];
         if ($variant === 'thumb' && $d->exists(self::thumbPath($path))) {
             return $d->response(self::thumbPath($path), null, $headers);
