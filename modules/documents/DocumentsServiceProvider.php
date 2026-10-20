@@ -46,6 +46,7 @@ class DocumentsServiceProvider extends ServiceProvider
                 Route::patch('/{document}', [DocumentsController::class, 'update'])->name('update');
                 Route::delete('/{document}', [DocumentsController::class, 'destroy'])->name('destroy');
                 Route::get('/{document}/file', [DocumentsController::class, 'fileShow'])->name('file');
+                Route::get('/{document}/detail', [DocumentsController::class, 'showDetail'])->name('detail');
             });
     }
 }

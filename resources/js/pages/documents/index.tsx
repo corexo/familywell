@@ -15,6 +15,8 @@ import {
     Building2,
     Calendar,
     CalendarClock,
+    ChevronLeft,
+    ChevronRight,
     Clock,
     Download,
     Edit3,
@@ -65,8 +67,21 @@ type DocumentItem = {
     createdAt: string;
 };
 
+type PaginationInfo = {
+    currentPage: number;
+    lastPage: number;
+    perPage: number;
+    total: number;
+    from: number | null;
+    to: number | null;
+    hasMorePages: boolean;
+    prevPageUrl: string | null;
+    nextPageUrl: string | null;
+};
+
 type Props = {
     documents: DocumentItem[];
+    pagination?: PaginationInfo;
     categories: string[];
     allTags: string[];
     stats: {
@@ -100,7 +115,7 @@ function formatBytes(bytes: number | null): string {
     return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
 }
 
-export default function DocumentsIndex({ documents, categories, allTags, stats, filters }: Props) {
+export default function DocumentsIndex({ documents, pagination, categories, allTags, stats, filters }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [{ title: 'Dokumente', href: '/m/documents' }];
 
     const [isAddOpen, setIsAddOpen] = useState(false);
@@ -189,10 +204,11 @@ export default function DocumentsIndex({ documents, categories, allTags, stats, 
         }
     };
 
-    const applyFilters = (newCategory?: string, newStatus?: string, newTag?: string) => {
+    const applyFilters = (newCategory?: string, newStatus?: string, newTag?: string, newSearch?: string) => {
         const cat = newCategory !== undefined ? newCategory : selectedCategory;
         const stat = newStatus !== undefined ? newStatus : selectedStatus;
         const tg = newTag !== undefined ? newTag : selectedTag;
+        const s = newSearch !== undefined ? newSearch : searchTerm;
 
         router.get(
             '/m/documents',
@@ -200,13 +216,16 @@ export default function DocumentsIndex({ documents, categories, allTags, stats, 
                 ...(cat !== 'all' ? { category: cat } : {}),
                 ...(stat !== 'all' ? { status: stat } : {}),
                 ...(tg ? { tag: tg } : {}),
-                ...(searchTerm ? { search: searchTerm } : {}),
+                ...(s ? { search: s } : {}),
             },
             { preserveState: true, replace: true }
         );
     };
 
     const filteredDocs = useMemo(() => {
+        if (pagination) {
+            return documents;
+        }
         return documents.filter((doc) => {
             if (selectedCategory !== 'all' && doc.category !== selectedCategory) return false;
             if (selectedStatus === 'expiring' && !doc.isExpiring) return false;
@@ -221,7 +240,7 @@ export default function DocumentsIndex({ documents, categories, allTags, stats, 
             }
             return true;
         });
-    }, [documents, selectedCategory, selectedStatus, selectedTag, searchTerm]);
+    }, [documents, pagination, selectedCategory, selectedStatus, selectedTag, searchTerm]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -377,10 +396,10 @@ export default function DocumentsIndex({ documents, categories, allTags, stats, 
                 {/* View Toolbar: Count & Grid/List Toggle */}
                 <div className="flex items-center justify-between gap-4 pt-1">
                     <span className="text-xs font-medium text-muted-foreground">
-                        {filteredDocs.length} {filteredDocs.length === 1 ? 'Dokument' : 'Dokumente'}
-                        {filteredDocs.length !== documents.length && (
+                        {pagination ? pagination.total : filteredDocs.length} {((pagination ? pagination.total : filteredDocs.length) === 1) ? 'Dokument' : 'Dokumente'}
+                        {pagination && pagination.total !== stats.total && (
                             <span className="ml-1 text-muted-foreground/75 font-normal">
-                                (gefiltert aus {documents.length})
+                                (gefiltert aus {stats.total})
                             </span>
                         )}
                     </span>
@@ -694,6 +713,101 @@ export default function DocumentsIndex({ documents, categories, allTags, stats, 
                                 </div>
                             );
                         })}
+                    </div>
+                )}
+
+                {/* Pagination Controls */}
+                {pagination && pagination.lastPage > 1 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border/60">
+                        <div className="text-xs text-muted-foreground">
+                            Zeige <span className="font-semibold text-foreground">{pagination.from || 0}</span> bis{' '}
+                            <span className="font-semibold text-foreground">{pagination.to || 0}</span> von{' '}
+                            <span className="font-semibold text-foreground">{pagination.total}</span> Dokumenten
+                            (Seite {pagination.currentPage} von {pagination.lastPage})
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={!pagination.prevPageUrl}
+                                onClick={() => pagination.prevPageUrl && router.get(pagination.prevPageUrl, {}, { preserveState: true })}
+                                className="h-8 gap-1 text-xs"
+                            >
+                                <ChevronLeft className="size-3.5" /> Vorherige
+                            </Button>
+
+                            <div className="flex items-center gap-1">
+                                {pagination.currentPage > 2 && (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => router.get('/m/documents', { ...filters, page: 1 }, { preserveState: true })}
+                                        className="h-8 w-8 p-0 text-xs"
+                                    >
+                                        1
+                                    </Button>
+                                )}
+                                {pagination.currentPage > 3 && (
+                                    <span className="text-xs text-muted-foreground px-1">…</span>
+                                )}
+
+                                {pagination.currentPage > 1 && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => pagination.prevPageUrl && router.get(pagination.prevPageUrl, {}, { preserveState: true })}
+                                        className="h-8 w-8 p-0 text-xs"
+                                    >
+                                        {pagination.currentPage - 1}
+                                    </Button>
+                                )}
+
+                                <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 text-xs font-semibold"
+                                >
+                                    {pagination.currentPage}
+                                </Button>
+
+                                {pagination.currentPage < pagination.lastPage && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => pagination.nextPageUrl && router.get(pagination.nextPageUrl, {}, { preserveState: true })}
+                                        className="h-8 w-8 p-0 text-xs"
+                                    >
+                                        {pagination.currentPage + 1}
+                                    </Button>
+                                )}
+
+                                {pagination.currentPage < pagination.lastPage - 2 && (
+                                    <span className="text-xs text-muted-foreground px-1">…</span>
+                                )}
+
+                                {pagination.currentPage < pagination.lastPage - 1 && (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => router.get('/m/documents', { ...filters, page: pagination.lastPage }, { preserveState: true })}
+                                        className="h-8 w-8 p-0 text-xs"
+                                    >
+                                        {pagination.lastPage}
+                                    </Button>
+                                )}
+                            </div>
+
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={!pagination.nextPageUrl}
+                                onClick={() => pagination.nextPageUrl && router.get(pagination.nextPageUrl, {}, { preserveState: true })}
+                                className="h-8 gap-1 text-xs"
+                            >
+                                Nächste <ChevronRight className="size-3.5" />
+                            </Button>
+                        </div>
                     </div>
                 )}
             </div>

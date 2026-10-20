@@ -118,7 +118,7 @@ class Document extends Model
     /**
      * @return array<string, mixed>
      */
-    public function toPayload(?string $fileUrl = null, ?Carbon $today = null): array
+    public function toPayload(?string $fileUrl = null, ?Carbon $today = null, bool $fullOcr = false): array
     {
         return [
             'id' => $this->id,
@@ -134,7 +134,7 @@ class Document extends Model
             'isOverdue' => $this->isOverdue($today),
             'hasFile' => $this->file_path !== null,
             'hasOcr' => ! empty($this->content_text),
-            'contentText' => $this->content_text,
+            'contentText' => $fullOcr ? $this->content_text : ($this->content_text ? mb_substr($this->content_text, 0, 180) : null),
             'fileName' => $this->file_name,
             'fileSize' => $this->file_size,
             'mimeType' => $this->mime_type,

@@ -87,6 +87,8 @@ export default function DocumentDetailModal({ doc, isOpen, onClose, onDelete, ca
     const [copiedOcr, setCopiedOcr] = useState(false);
     const [tagInput, setTagInput] = useState('');
     const [tagsList, setTagsList] = useState<string[]>(doc.tags || []);
+    const [fullOcrText, setFullOcrText] = useState<string | null>(doc.contentText || null);
+    const [loadingOcr, setLoadingOcr] = useState(false);
 
     const { data, setData, patch, processing, isDirty } = useForm({
         title: doc.title,
@@ -115,6 +117,20 @@ export default function DocumentDetailModal({ doc, isOpen, onClose, onDelete, ca
             tags: doc.tags ? doc.tags.join(', ') : '',
         });
         setTagsList(doc.tags || []);
+        setFullOcrText(doc.contentText || null);
+
+        if (doc.hasOcr && (!doc.contentText || doc.contentText.length <= 180)) {
+            setLoadingOcr(true);
+            fetch(`/m/documents/${doc.id}/detail`)
+                .then((res) => res.json())
+                .then((json) => {
+                    if (json?.contentText) {
+                        setFullOcrText(json.contentText);
+                    }
+                })
+                .catch(() => {})
+                .finally(() => setLoadingOcr(false));
+        }
     }, [doc]);
 
     const handleAddTag = () => {
@@ -144,8 +160,9 @@ export default function DocumentDetailModal({ doc, isOpen, onClose, onDelete, ca
     };
 
     const copyOcrText = () => {
-        if (!doc.contentText) return;
-        navigator.clipboard.writeText(doc.contentText);
+        const text = fullOcrText || doc.contentText;
+        if (!text) return;
+        navigator.clipboard.writeText(text);
         setCopiedOcr(true);
         setTimeout(() => setCopiedOcr(false), 2000);
     };
@@ -415,18 +432,24 @@ export default function DocumentDetailModal({ doc, isOpen, onClose, onDelete, ca
                                 </div>
 
                                 {/* Extracted OCR Text Section */}
-                                {doc.contentText && (
+                                {(doc.hasOcr || fullOcrText || doc.contentText) && (
                                     <div className="space-y-1.5 pt-2 border-t">
                                         <div className="flex items-center justify-between">
                                             <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                                                 <FileText className="size-3.5 text-emerald-600 dark:text-emerald-400" />
                                                 Erkannter Volltext (OCR)
+                                                {loadingOcr && (
+                                                    <span className="text-[10px] text-muted-foreground font-normal italic animate-pulse">
+                                                        (Lade Volltext...)
+                                                    </span>
+                                                )}
                                             </Label>
                                             <Button
                                                 type="button"
                                                 variant="ghost"
                                                 size="sm"
                                                 onClick={copyOcrText}
+                                                disabled={!fullOcrText && !doc.contentText}
                                                 className="h-6 px-2 text-[11px] gap-1 text-muted-foreground hover:text-foreground"
                                             >
                                                 {copiedOcr ? (
@@ -443,7 +466,7 @@ export default function DocumentDetailModal({ doc, isOpen, onClose, onDelete, ca
                                             </Button>
                                         </div>
                                         <div className="max-h-48 overflow-y-auto rounded-lg border bg-muted/40 p-3 text-[11px] font-mono text-muted-foreground whitespace-pre-wrap select-text leading-relaxed">
-                                            {doc.contentText}
+                                            {fullOcrText || doc.contentText || (loadingOcr ? 'Lade vollständigen Text...' : 'Kein Text vorhanden')}
                                         </div>
                                     </div>
                                 )}

@@ -5,6 +5,7 @@ namespace Modules\Documents;
 use App\Http\Controllers\Controller;
 use App\Support\Media\StoredImage;
 use App\Support\Tenancy\CurrentFamily;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -50,25 +51,49 @@ class DocumentsController extends Controller
             $query->whereNotNull('due_on')->where('due_on', '<', $today);
         }
 
-        $documents = $query->orderByDesc('created_at')->get()
-            ->map(fn (Document $d) => $d->toPayload($this->fileUrl($d)))
+        // 1. Fast SQL Aggregates for stats (Zero memory overhead)
+        $baseQuery = Document::where('family_id', $familyId);
+        $totalCount = (clone $baseQuery)->count();
+        $totalAmount = (float) (clone $baseQuery)->whereIn('category', ['invoice', 'receipt'])->sum('amount');
+        $limitDate = now()->addDays(Document::EXPIRY_LEAD_DAYS)->toDateString();
+        $expiringCount = (clone $baseQuery)->whereNotNull('expires_on')->where('expires_on', '<=', $limitDate)->where('expires_on', '>=', $today)->count();
+        $overdueCount = (clone $baseQuery)->whereNotNull('due_on')->where('due_on', '<', $today)->count();
+
+        // 2. Fetch tags list efficiently
+        $allTags = Document::where('family_id', $familyId)
+            ->whereNotNull('tags')
+            ->select('tags')
+            ->pluck('tags')
+            ->flatten()
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        // 3. Paginate to 30 items per page with light payloads
+        $paginated = $query->orderByDesc('created_at')->paginate(30)->withQueryString();
+
+        $documents = collect($paginated->items())
+            ->map(fn (Document $d) => $d->toPayload($this->fileUrl($d), null, false))
             ->values();
-
-        // Calculate summary stats for the current family
-        $allDocs = Document::where('family_id', $familyId)->get();
-        $totalAmount = (float) $allDocs->whereIn('category', ['invoice', 'receipt'])->sum('amount');
-        $expiringCount = $allDocs->filter(fn (Document $d) => $d->isExpiring())->count();
-        $overdueCount = $allDocs->filter(fn (Document $d) => $d->isOverdue())->count();
-
-        // Unique tags for tag cloud
-        $allTags = $allDocs->pluck('tags')->flatten()->filter()->unique()->values()->all();
 
         return Inertia::render('documents/index', [
             'documents' => $documents,
+            'pagination' => [
+                'currentPage' => $paginated->currentPage(),
+                'lastPage' => $paginated->lastPage(),
+                'perPage' => $paginated->perPage(),
+                'total' => $paginated->total(),
+                'from' => $paginated->firstItem(),
+                'to' => $paginated->lastItem(),
+                'hasMorePages' => $paginated->hasMorePages(),
+                'prevPageUrl' => $paginated->previousPageUrl(),
+                'nextPageUrl' => $paginated->nextPageUrl(),
+            ],
             'categories' => Document::CATEGORIES,
             'allTags' => $allTags,
             'stats' => [
-                'total' => $allDocs->count(),
+                'total' => $totalCount,
                 'totalAmount' => $totalAmount,
                 'expiringCount' => $expiringCount,
                 'overdueCount' => $overdueCount,
@@ -149,6 +174,17 @@ class DocumentsController extends Controller
         abort_unless($document->file_path, 404);
 
         return StoredImage::response($document->file_path, $request->query('v'));
+    }
+
+    public function showDetail(Document $document): JsonResponse
+    {
+        $this->authorizeDocument($document);
+
+        return response()->json([
+            'id' => $document->id,
+            'contentText' => $document->content_text,
+            'notes' => $document->notes,
+        ]);
     }
 
     private function validateDocument(Request $request): array
