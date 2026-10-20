@@ -161,7 +161,7 @@ class DocumentOcrService
         $smartTitle = $this->generateTitle($docType, $v, $period, $date ?: ($current['issued_on'] ?? null), $result['amount'] ?? ($current['amount'] ?? null));
 
         $currentTitle = $current['title'] ?? '';
-        if ($smartTitle && ($this->isGenericTitle($currentTitle) || empty($currentTitle))) {
+        if ($smartTitle && ($this->isGenericTitle($currentTitle, $docType) || empty($currentTitle))) {
             $result['title'] = $smartTitle;
         }
 
@@ -505,7 +505,7 @@ class DocumentOcrService
         return $tags;
     }
 
-    protected function isGenericTitle(string $title): bool
+    protected function isGenericTitle(string $title, string $docType = 'Dokument'): bool
     {
         if (empty($title)) {
             return true;
@@ -517,7 +517,19 @@ class DocumentOcrService
             return true;
         }
 
-        if (preg_match('/^[0-9_\-\.\s]{5,}$/', $lower)) {
+        if (preg_match('/^[0-9_\-\.\s]{5,}$/', $lower) || preg_match('/^[a-z0-9]{15,}$/i', $lower)) {
+            return true;
+        }
+
+        if (preg_match('/^20[0-9]{2}[\s_\-][0-9]{2}[\s_\-][0-9]{2}[\s_\-][0-9a-z\s]+$/i', $lower)) {
+            return true;
+        }
+
+        if (preg_match('/^(sir|px\d|dhl|dpd|gls|ups|inv)[\d\w\s\-]+$/i', $lower)) {
+            return true;
+        }
+
+        if ($docType !== 'Dokument' && ! str_contains($lower, strtolower($docType))) {
             return true;
         }
 
