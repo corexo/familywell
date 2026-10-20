@@ -33,6 +33,7 @@ class Document extends Model
         'file_size',
         'mime_type',
         'notes',
+        'content_text',
         'tags',
         'created_by',
     ];
@@ -132,6 +133,8 @@ class Document extends Model
             'isExpiring' => $this->isExpiring($today),
             'isOverdue' => $this->isOverdue($today),
             'hasFile' => $this->file_path !== null,
+            'hasOcr' => ! empty($this->content_text),
+            'contentText' => $this->content_text ? mb_substr($this->content_text, 0, 400) : null,
             'fileName' => $this->file_name,
             'fileSize' => $this->file_size,
             'mimeType' => $this->mime_type,

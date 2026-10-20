@@ -50,6 +50,8 @@ type DocumentItem = {
     isExpiring: boolean;
     isOverdue: boolean;
     hasFile: boolean;
+    hasOcr?: boolean;
+    contentText?: string | null;
     fileName: string | null;
     fileSize: number | null;
     mimeType: string | null;
@@ -396,12 +398,19 @@ export default function DocumentsIndex({ documents, categories, allTags, stats, 
                                     <div>
                                         {/* Top Row: Category badge & Actions */}
                                         <div className="flex items-start justify-between gap-2">
-                                            <span
-                                                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${meta.color}`}
-                                            >
-                                                <Icon className="size-3" />
-                                                {meta.label}
-                                            </span>
+                                            <div className="flex items-center gap-1.5">
+                                                <span
+                                                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${meta.color}`}
+                                                >
+                                                    <Icon className="size-3" />
+                                                    {meta.label}
+                                                </span>
+                                                {doc.hasOcr && (
+                                                    <span className="inline-flex items-center rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title="Text per OCR / Volltextsuche erfasst">
+                                                        OCR
+                                                    </span>
+                                                )}
+                                            </div>
 
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>

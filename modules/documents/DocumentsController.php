@@ -7,9 +7,11 @@ use App\Support\Media\StoredImage;
 use App\Support\Tenancy\CurrentFamily;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Modules\Documents\Services\DocumentOcrService;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DocumentsController extends Controller
@@ -29,7 +31,8 @@ class DocumentsController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
                     ->orWhere('vendor', 'like', "%{$search}%")
-                    ->orWhere('notes', 'like', "%{$search}%");
+                    ->orWhere('notes', 'like', "%{$search}%")
+                    ->orWhere('content_text', 'like', "%{$search}%");
             });
         }
 
@@ -100,6 +103,7 @@ class DocumentsController extends Controller
 
         if ($request->hasFile('file')) {
             $document->attachFile($request->file('file'), $request->file('file_thumb'));
+            $this->processOcr($document);
         }
 
         return back();
@@ -125,6 +129,7 @@ class DocumentsController extends Controller
 
         if ($request->hasFile('file')) {
             $document->attachFile($request->file('file'), $request->file('file_thumb'));
+            $this->processOcr($document);
         }
 
         return back();
@@ -186,5 +191,31 @@ class DocumentsController extends Controller
     private function authorizeDocument(Document $document): void
     {
         abort_unless((int) $document->family_id === (int) CurrentFamily::id(), 404);
+    }
+
+    private function processOcr(Document $document): void
+    {
+        try {
+            $disk = Storage::disk(StoredImage::disk());
+            if (! $document->file_path || ! $disk->exists($document->file_path)) {
+                return;
+            }
+            $ocr = app(DocumentOcrService::class);
+            $text = $ocr->extractText($disk->path($document->file_path), $document->mime_type);
+            if ($text && mb_strlen(trim($text)) >= 10) {
+                $updates = ['content_text' => $text];
+                $analysis = $ocr->analyze($text, [
+                    'title' => $document->title,
+                    'vendor' => $document->vendor,
+                    'category' => $document->category,
+                    'amount' => $document->amount,
+                    'issued_on' => optional($document->issued_on)->toDateString(),
+                    'tags' => $document->tags ?? [],
+                ]);
+                $document->update(array_merge($updates, $analysis));
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 }

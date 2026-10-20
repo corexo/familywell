@@ -33,6 +33,7 @@ class DocumentsServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 Commands\ImportDocuments::class,
+                Commands\ProcessDocumentOcr::class,
             ]);
         }
 
