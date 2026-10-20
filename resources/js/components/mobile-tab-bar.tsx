@@ -9,6 +9,7 @@ import {
     Car,
     ChefHat,
     Contact,
+    FileText,
     FolderKanban,
     Import,
     LayoutGrid,
@@ -49,6 +50,7 @@ export const MODULE_ITEMS: Item[] = [
     { key: 'birthdays', labelKey: 'nav.birthdays', url: '/m/birthdays', icon: Cake },
     { key: 'inventory', labelKey: 'nav.inventory', url: '/m/inventory', icon: Package },
     { key: 'vehicles', labelKey: 'nav.vehicles', url: '/m/vehicles', icon: Car },
+    { key: 'documents', labelKey: 'nav.documents', url: '/m/documents', icon: FileText },
     { key: 'expense_import', labelKey: 'nav.expense_import', url: '/m/expense-import', icon: Import },
 ];
 const SECONDARY: Item[] = [

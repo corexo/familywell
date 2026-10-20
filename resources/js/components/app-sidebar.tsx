@@ -11,6 +11,7 @@ import {
     Car,
     ChefHat,
     Contact,
+    FileText,
     FolderKanban,
     Import,
     LayoutGrid,
@@ -45,6 +46,7 @@ const moduleNavItems: Record<string, { titleKey: string; url: string; icon: Luci
     birthdays: { titleKey: 'nav.birthdays', url: '/m/birthdays', icon: Cake },
     inventory: { titleKey: 'nav.inventory', url: '/m/inventory', icon: Package },
     vehicles: { titleKey: 'nav.vehicles', url: '/m/vehicles', icon: Car },
+    documents: { titleKey: 'nav.documents', url: '/m/documents', icon: FileText },
     expense_import: { titleKey: 'nav.expense_import', url: '/m/expense-import', icon: Import },
 };
 

@@ -1,0 +1,9 @@
+{
+    "id": "documents",
+    "name": "Documents",
+    "description": "Store, organize and search family documents, invoices, receipts, warranties and contracts.",
+    "version": "1.0.0",
+    "provider": "Modules\\Documents\\DocumentsServiceProvider",
+    "frontend": "",
+    "requires": []
+}

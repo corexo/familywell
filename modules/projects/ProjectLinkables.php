@@ -8,6 +8,7 @@ use App\Support\Tenancy\CurrentFamily;
 use Illuminate\Support\Collection;
 use Modules\Contacts\ContactMethod;
 use Modules\Contacts\Person;
+use Modules\Documents\Document;
 use Modules\Spending\Fx;
 use Modules\Spending\SpendEvent;
 
@@ -26,8 +27,14 @@ class ProjectLinkables
 
     public const CONTACT = 'contact';
 
+    public const DOCUMENT = 'document';
+
     /** link type => owning module id */
-    public const MODULES = [self::SPEND => 'spending', self::CONTACT => 'contacts'];
+    public const MODULES = [
+        self::SPEND => 'spending',
+        self::CONTACT => 'contacts',
+        self::DOCUMENT => 'documents',
+    ];
 
     public static function enabled(string $type): bool
     {
@@ -87,6 +94,12 @@ class ProjectLinkables
     /** @param  list<int>|null  $ids  null = every visible item */
     private static function query(User $user, string $type, ?array $ids): Collection
     {
+        if ($type === self::DOCUMENT) {
+            return Document::query()->when($ids !== null, fn ($q) => $q->whereIn('id', $ids))
+                ->where('family_id', (int) CurrentFamily::id())
+                ->orderByDesc('created_at')->get();
+        }
+
         if ($type === self::CONTACT) {
             return Person::query()->when($ids !== null, fn ($q) => $q->whereIn('id', $ids))
                 ->with(['contactMethods' => fn ($q) => $q->where('type', 'phone')])
@@ -101,8 +114,22 @@ class ProjectLinkables
             ->values();
     }
 
-    private static function payload(SpendEvent|Person $m): array
+    private static function payload(SpendEvent|Person|Document $m): array
     {
+        if ($m instanceof Document) {
+            return [
+                'id' => $m->id,
+                'title' => $m->title,
+                'category' => $m->category,
+                'vendor' => $m->vendor,
+                'amount' => $m->amount !== null ? (float) $m->amount : null,
+                'currency' => $m->currency,
+                'fileName' => $m->file_name,
+                'hasFile' => $m->file_path !== null,
+                'url' => '/m/documents',
+            ];
+        }
+
         if ($m instanceof Person) {
             /** @var ContactMethod|null $phone */
             $phone = $m->contactMethods->first(); // only phone methods are loaded, in position order
