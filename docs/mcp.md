@@ -213,7 +213,9 @@ OAuth       POST /oauth/register (RFC 7591)   GET|POST|DELETE /oauth/authorize (
 
 - **Keys:** Passport signs tokens with an RSA pair from `PASSPORT_PRIVATE_KEY` / `PASSPORT_PUBLIC_KEY`
   (newlines as literal `\n`). `.do/apply.sh` generates them into `.env.do` and injects them as secrets.
-  Rotating them disconnects every app. Locally, `php artisan passport:keys` writes `storage/oauth-*.key`.
+  Rotating them disconnects every app. Without those env vars (self-host, local) the keys are files in
+  `storage/app/oauth/` (the persistent volume); the image's start command runs `php artisan passport:keys`,
+  which creates them once and leaves an existing pair alone.
 - **Env:** `MCP_AUTHORIZATION_SERVER` (the host that runs OAuth, `https://familywell.co` in production)
   and `MCP_SERVER_URL` (the address shown in Settings).
 - **DNS:** `mcp.familywell.co` is an ALIAS domain on the app (`.do/app.yaml`) with a Cloudflare CNAME

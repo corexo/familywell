@@ -58,6 +58,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Keys live on the persistent storage/app volume, so recreating the container keeps every connection.
+        // The image generates them on first start (Dockerfile CMD). PASSPORT_PRIVATE_KEY/PUBLIC_KEY still win.
+        Passport::loadKeysFrom(storage_path('app/oauth'));
         // Short access tokens; clients refresh silently. A connector unused for 30 days re-runs consent.
         Passport::tokensExpireIn(now()->addHour());
         Passport::refreshTokensExpireIn(now()->addDays(30));
