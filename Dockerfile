@@ -21,4 +21,5 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction
 # One production-grade image: FrankenPHP serves Octane (multi-threaded), no nginx+php-fpm to orchestrate.
 # Octane keeps the app in memory between requests, so tenant state must never live in a raw static (see tenancy).
 EXPOSE 8000
-CMD ["php", "artisan", "octane:start", "--server=frankenphp", "--host=0.0.0.0", "--port=8000"]
+# OAuth (MCP) signing keys: create them once on the storage/app volume; an existing pair is left alone.
+CMD ["sh", "-c", "mkdir -p storage/app/oauth && (php artisan passport:keys --no-interaction || true) && exec php artisan octane:start --server=frankenphp --host=0.0.0.0 --port=8000"]
